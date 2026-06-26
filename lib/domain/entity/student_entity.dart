@@ -195,4 +195,6 @@ class Student extends Equatable {
         data_nascimento,
         ratings,
       ];
+
+  
 }
