@@ -5,34 +5,34 @@ import 'student_repository_interface.dart';
 import '../../domain/entity/student_entity.dart';
 
 final class StudentRepositoryImpl implements IStudentRepository {
-    final IStudentStorage _localStorage;
+  final IStudentStorage _localStorage;
 
-    StudentRepositoryImpl({
-        required IStudentStorage localstorage,
-    }) : _localStorage = localstorage;
-    
-    @override
-    Future<Result<StudentEntity, Failure>> create(StudentEntity student) async {
-        return await _localStorage.createStudent(student);
-    }
+  StudentRepositoryImpl({
+    required IStudentStorage localstorage,
+  }) : _localStorage = localstorage;
 
-    @override
-    Future<Result<StudentEntity, Failure>> update(StudentEntity student) async {
-        return await _localStorage.updateStudent(student);
-    }
+  @override
+  Future<Result<Student, Failure>> create(Student student) async {
+    return await _localStorage.createStudent(student);
+  }
 
-    @override
-    Future<Result<void, Failure>> delete(String id) async {
-        return await _localStorage.deleteStudent(id);
-    }
+  @override
+  Future<Result<Student, Failure>> update(Student student) async {
+    return await _localStorage.updateStudent(student);
+  }
 
-    @override
-    Future<Result<StudentEntity, Failure>> getById(String id) async {
-        return await _localStorage.getStudentById(id);
-    }   
+  @override
+  Future<Result<void, Failure>> delete(String id) async {
+    return await _localStorage.deleteStudent(id);
+  }
 
-    @override
-    Future<Result<List<StudentEntity>, Failure>> getAll() async {
-        return await _localStorage.getStudents();
-    }
+  @override
+  Future<Result<Student, Failure>> getById(String id) async {
+    return await _localStorage.getStudentById(id);
+  }
+
+  @override
+  Future<Result<List<Student>, Failure>> getAll() async {
+    return await _localStorage.getStudents();
+  }
 }
