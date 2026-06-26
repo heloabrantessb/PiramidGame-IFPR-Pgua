@@ -7,7 +7,7 @@ import '../../domain/entity/student_mapper.dart';
 import 'student_storage_interface.dart';
 
 final class StudentSharedPreferencesService implements IStudentStorage {
-  static const String _storageKey = 'students_list';
+  static const String _storageKey = 'students';
 
   @override
   Future<Result<List<Student>, Failure>> getStudents() async {
