@@ -133,7 +133,7 @@ class StudentCommandsViewModel {
   // ========================================================
   Future<void> fetchStudents() async {
     state.clearMessage();
-    await _getAllStudentsCommand.executeWith(());
+    await _getAllStudentsCommand.call();
   }
 
   Future<void> fetchStudentById(String id) async {

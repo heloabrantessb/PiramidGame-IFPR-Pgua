@@ -1,11 +1,11 @@
-import 'package:piramid_game/core/patterns/result.dart';
-import 'package:piramid_game/domain/entity/student_entity.dart';
-import 'package:piramid_game/domain/errors/failures.dart';
+import '../../core/patterns/result.dart';
+import '../../core/failure/failure.dart';
+import '../entity/student_entity.dart';
 
 abstract interface class IStudentFacadeUsecases {
-  Future<Result<List<StudentEntity>, Failure>> getAllStudents();
-  Future<Result<StudentEntity, Failure>> getStudentById(String id);
-  Future<Result<void, Failure>> addStudent(StudentEntity student);
-  Future<Result<void, Failure>> updateStudent(StudentEntity student);
+  Future<Result<List<Student>, Failure>> getAllStudents();
+  Future<Result<Student, Failure>> getStudentById(String id);
+  Future<Result<void, Failure>> addStudent(Student student);
+  Future<Result<void, Failure>> updateStudent(Student student);
   Future<Result<void, Failure>> deleteStudent(String id);
 }

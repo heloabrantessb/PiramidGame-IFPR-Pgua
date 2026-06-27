@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/patterns/result.dart';
 import '../../core/failure/failure.dart';
 import '../../domain/entity/student_entity.dart';
-import '../../domain/entity/student_mapper.dart';
+import '../../domain/entity/mappers/student_mapper.dart';
 import 'student_storage_interface.dart';
 
 final class StudentSharedPreferencesService implements IStudentStorage {

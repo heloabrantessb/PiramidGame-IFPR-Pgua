@@ -1,4 +1,4 @@
-import 'student_entity.dart';
+import '../student_entity.dart';
 
 class StudentMapper {
   static Map<String, dynamic> toMap(Student student) {
