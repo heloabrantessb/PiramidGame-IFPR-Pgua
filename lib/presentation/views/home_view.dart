@@ -202,22 +202,26 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
               style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             subtitle: Text('${student.curso.displayOptionsName} • Turma ${student.ano}'),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '${student.ratings.nivelLenda} pts',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
+            trailing: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${student.ratings.nivelLenda} pts',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
                   ),
-                ),
-                Text(
-                  'Nível Lenda',
-                  style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.secondary),
-                ),
-              ],
+                  Text(
+                    'Nível Lenda',
+                    style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.secondary),
+                  ),
+                ],
+              ),
             ),
             onTap: () => _showStudentDetails(context, student),
           ),

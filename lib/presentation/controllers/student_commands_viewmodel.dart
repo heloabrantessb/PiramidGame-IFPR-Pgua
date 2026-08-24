@@ -65,6 +65,7 @@ class StudentCommandsViewModel {
           command.clear();
         },
         onFailure: (err) {
+          print('[COMMAND FAILURE]: ${err.msg}');
           state.setMessage(err.msg);
           if (onFailure != null) onFailure(err);
           command.clear();

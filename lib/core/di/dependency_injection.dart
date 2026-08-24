@@ -1,7 +1,7 @@
 import 'package:auto_injector/auto_injector.dart';
 import '../../data/repositories/student_repository_impl.dart';
 import '../../data/repositories/student_repository_interface.dart';
-import '../../data/services/student_shared_preferences_service.dart';
+import '../../data/services/student_sqlite_service.dart';
 import '../../data/services/student_storage_interface.dart';
 import '../../domain/facades/student_facade_usecases_impl.dart';
 import '../../domain/facades/student_facade_usecases_interface.dart';
@@ -17,7 +17,7 @@ void setupDependencyInjection() {
   injector.addSingleton<ThemeController>(ThemeController.new);
 
   // Data Services & Repositories
-  injector.addSingleton<IStudentStorage>(StudentSharedPreferencesService.new);
+  injector.addSingleton<IStudentStorage>(StudentSqliteService.new);
   injector.addSingleton<IStudentRepository>(StudentRepositoryImpl.new);
 
   // Domain Use Cases
