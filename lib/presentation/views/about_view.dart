@@ -89,19 +89,19 @@ class AboutView extends StatelessWidget {
               context,
               Icons.star_rounded,
               'Avaliação em Estrelas',
-              'Cada estudante cadastrado é avaliado em exatamente 15 critérios comportamentais descontraídos, recebendo notas de 1 a 5 estrelas em cada.',
+              'Após criar uma conta e entrar, cada usuário pode avaliar outros em 15 critérios, com notas de 1 a 5 estrelas. Não é permitido avaliar a si mesmo.',
             ),
             _buildRuleItem(
               context,
               Icons.looks_one_rounded,
               'Cálculo do Nível Lenda',
-              'A soma total das estrelas resulta no Nível Lenda do aluno (mínimo de 15 e máximo de 75 pontos), servindo como score no ranking.',
+              'Cada avaliação soma de 15 a 75 pontos. O Nível Lenda é a média dos totais recebidos. Sem avaliações, o perfil fica sem pontuação. Cada conta pode atualizar sua avaliação sem somar votos extras.',
             ),
             _buildRuleItem(
               context,
               Icons.storage_rounded,
               'Armazenamento Local',
-              'Todos os dados são persistidos de maneira 100% local no dispositivo usando SharedPreferences serializado em formato JSON.',
+              'Contas, perfis e avaliações ficam salvos em SQLite apenas neste aparelho. Não há sincronização entre dispositivos.',
             ),
             _buildRuleItem(
               context,
