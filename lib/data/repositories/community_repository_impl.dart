@@ -7,11 +7,13 @@ import '../../domain/entity/student_entity.dart';
 import '../../domain/repositories/community_repository_interface.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/community_firestore_service.dart';
+import '../services/local_preferences_service.dart';
 
 class CommunityRepositoryImpl implements ICommunityRepository {
   final FirebaseAuthService auth;
   final CommunityFirestoreService service;
-  CommunityRepositoryImpl(this.auth, this.service);
+  final LocalPreferencesService preferences;
+  CommunityRepositoryImpl(this.auth, this.service, this.preferences);
   Stream<AccountSession?>? _sessions;
 
   @override
@@ -114,4 +116,10 @@ class CommunityRepositoryImpl implements ICommunityRepository {
   @override
   Future<Result<void, Failure>> rate(String uid, Assessment a) =>
       _run(() => service.rate(uid, a));
+  @override
+  Future<Result<bool, Failure>> readDarkTheme() =>
+      _run(preferences.readDarkTheme);
+  @override
+  Future<Result<void, Failure>> saveDarkTheme(bool dark) =>
+      _run(() => preferences.saveDarkTheme(dark));
 }

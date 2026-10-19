@@ -28,4 +28,6 @@ abstract interface class ICommunityRepository {
     String targetId,
   );
   Future<Result<void, Failure>> rate(String actorUid, Assessment assessment);
+  Future<Result<bool, Failure>> readDarkTheme();
+  Future<Result<void, Failure>> saveDarkTheme(bool dark);
 }

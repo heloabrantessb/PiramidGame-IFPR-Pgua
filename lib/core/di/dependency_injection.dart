@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/repositories/community_repository_impl.dart';
 import '../../data/services/firebase_auth_service.dart';
 import '../../data/services/community_firestore_service.dart';
+import '../../data/services/local_preferences_service.dart';
 import '../../domain/facades/community_facade.dart';
 import '../../domain/repositories/community_repository_interface.dart';
 import '../../domain/usecase/community_usecases.dart';
@@ -22,6 +23,7 @@ void setupDependencyInjection() {
       FirebaseAuth.instance,
     ),
   );
+  injector.addSingleton<LocalPreferencesService>(LocalPreferencesService.new);
   injector.addSingleton<ICommunityRepository>(CommunityRepositoryImpl.new);
   injector.addSingleton<CommunityUseCases>(CommunityUseCases.new);
   injector.addSingleton<CommunityFacade>(CommunityFacade.new);

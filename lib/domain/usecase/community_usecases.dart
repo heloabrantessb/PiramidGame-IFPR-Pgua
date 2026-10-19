@@ -204,6 +204,10 @@ class CommunityUseCases {
     return null;
   }
 
+  Future<Result<bool, Failure>> readDarkTheme() => repository.readDarkTheme();
+  Future<Result<void, Failure>> saveDarkTheme(bool dark) =>
+      repository.saveDarkTheme(dark);
+
   static bool _validEmail(String email) =>
       email.length <= 254 &&
       RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email);

@@ -16,6 +16,7 @@ Future<void> main() async {
       );
     }
     setupDependencyInjection();
+    await injector.get<ThemeController>().restore();
     runApp(const MyApp());
   } catch (error, stack) {
     debugPrint('Falha na inicialização: $error\n$stack');

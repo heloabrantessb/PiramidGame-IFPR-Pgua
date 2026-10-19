@@ -218,7 +218,12 @@ class _HomeViewState extends State<HomeView> {
           actions: [
             IconButton(
               tooltip: 'Alternar tema',
-              onPressed: _theme.toggleTheme,
+              onPressed: () async {
+                final result = await _theme.toggleCommand.call();
+                if (mounted && result.isFailure) {
+                  setState(() => _error = result.failureValueOrNull!.msg);
+                }
+              },
               icon: Icon(
                 _theme.isLightMode.value ? Icons.dark_mode : Icons.light_mode,
               ),

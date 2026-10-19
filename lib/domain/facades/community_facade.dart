@@ -33,4 +33,7 @@ class CommunityFacade {
   Future<Result<PopularityRatings?, Failure>> assessment(String id) =>
       useCases.assessment(id);
   Future<Result<void, Failure>> rate(Assessment a) => useCases.rate(a);
+  Future<Result<bool, Failure>> readDarkTheme() => useCases.readDarkTheme();
+  Future<Result<void, Failure>> saveDarkTheme(bool dark) =>
+      useCases.saveDarkTheme(dark);
 }
