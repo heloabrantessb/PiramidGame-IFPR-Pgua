@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 import 'core/di/dependency_injection.dart';
@@ -10,6 +11,14 @@ import 'firebase_options.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
+    if (kIsWeb ||
+        (defaultTargetPlatform != TargetPlatform.android &&
+            defaultTargetPlatform != TargetPlatform.iOS)) {
+      throw UnsupportedError(
+        'Este aplicativo está disponível para Android e iOS. '
+        'Abra em um celular ou emulador compatível.',
+      );
+    }
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
@@ -30,16 +39,20 @@ Future<void> main() async {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'Não foi possível iniciar o aplicativo. '
-                    'Verifique a configuração do Firebase e tente novamente.',
+                  Text(
+                    error is UnsupportedError
+                        ? error.message ?? 'Plataforma não suportada.'
+                        : 'Não foi possível iniciar o aplicativo. '
+                              'Verifique a configuração do Firebase e tente novamente.',
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: main,
-                    child: const Text('Tentar novamente'),
-                  ),
+                  if (error is! UnsupportedError) ...[
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: main,
+                      child: const Text('Tentar novamente'),
+                    ),
+                  ],
                 ],
               ),
             ),
