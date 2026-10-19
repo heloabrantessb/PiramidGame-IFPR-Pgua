@@ -1,0 +1,104 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function userPath(uid) { return /databases/$(database)/documents/usuarios/$(uid); }
+    function personPath(id) { return /databases/$(database)/documents/pessoas/$(id); }
+    function votePath(uid, id) { return /databases/$(database)/documents/avaliacoes/$(uid + '_' + id); }
+    function note(value) { return value is int && value >= 1 && value <= 5; }
+    function validUser(d) {
+      return d.keys().hasAll(['nome', 'email', 'foto', 'provider', 'pessoaId'])
+        && d.keys().hasOnly(['nome', 'email', 'foto', 'provider', 'pessoaId'])
+        && d.nome is string && d.nome.size() <= 200
+        && d.email is string && d.email.size() <= 254
+        && (d.foto == null || d.foto is string)
+        && d.provider is string
+        && (d.pessoaId == null || d.pessoaId is string);
+    }
+    function validLink(uid) {
+      let old = resource.data.pessoaId;
+      let next = request.resource.data.pessoaId;
+      return next == old
+        || (old == null && next is string
+          && getAfter(personPath(next)).data.usuarioUid == uid)
+        || (next == null && old is string && !existsAfter(personPath(old)));
+    }
+    match /usuarios/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && validUser(request.resource.data) && request.resource.data.pessoaId == null;
+      allow update: if signedIn() && request.auth.uid == uid
+        && validUser(request.resource.data) && validLink(uid)
+        || (signedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pessoaId'])
+          && request.resource.data.pessoaId == null && resource.data.pessoaId is string
+          && get(personPath(resource.data.pessoaId)).data.criadoPor == request.auth.uid
+          && !existsAfter(personPath(resource.data.pessoaId)));
+      allow delete: if false;
+    }
+    function validPerson(d, id) {
+      return d.keys().hasAll(['nome', 'apelido', 'curso', 'turma', 'dataNascimento', 'criadoPor', 'usuarioUid'])
+        && d.keys().hasOnly(['nome', 'apelido', 'curso', 'turma', 'dataNascimento', 'criadoPor', 'usuarioUid'])
+        && d.nome is string && d.nome.size() > 0 && d.nome.size() <= 200
+        && d.nome.matches('.*\\S.*')
+        && d.apelido is string && d.apelido.size() <= 200
+        && d.curso in ['info', 'mec', 'mamb', 'prod', 'tads', 'tga']
+        && d.turma is int && d.turma >= 1998 && d.turma <= 2026
+        && d.dataNascimento is timestamp
+        && d.dataNascimento >= timestamp.date(1900, 1, 1) && d.dataNascimento <= request.time + duration.value(1, 'd')
+        && d.criadoPor == request.auth.uid
+        && (d.usuarioUid == null || (d.usuarioUid is string
+          && getAfter(userPath(d.usuarioUid)).data.pessoaId == id
+          && !existsAfter(votePath(d.usuarioUid, id))));
+    }
+    match /pessoas/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && validPerson(request.resource.data, id)
+        && (request.resource.data.usuarioUid == null || request.resource.data.usuarioUid == request.auth.uid);
+      allow update: if signedIn() && resource.data.criadoPor == request.auth.uid
+        && request.resource.data.criadoPor == resource.data.criadoPor
+        && (resource.data.usuarioUid == null || request.resource.data.usuarioUid == resource.data.usuarioUid)
+        && validPerson(request.resource.data, id)
+        && (resource.data.usuarioUid != null || request.resource.data.usuarioUid == null || request.resource.data.usuarioUid == request.auth.uid)
+        || (signedIn() && resource.data.usuarioUid == null
+          && request.resource.data.usuarioUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usuarioUid'])
+          && getAfter(userPath(request.auth.uid)).data.pessoaId == id
+          && !existsAfter(votePath(request.auth.uid, id)));
+      allow delete: if signedIn() && resource.data.criadoPor == request.auth.uid
+        && (resource.data.usuarioUid == null || getAfter(userPath(resource.data.usuarioUid)).data.pessoaId == null);
+    }
+    function validVote(d, id) {
+      return d.keys().hasAll(['avaliadorUid', 'pessoaId', 'resenha', 'presencaVip', 'aura', 'modoParceiro', 'carismaNatural', 'humorDeMilhoes', 'energiaDeGrupo', 'criatividadeCaotica', 'modoAtleta', 'talentoDePalco', 'dripEscolar', 'coracaoDeDorama', 'queridinhoDosProfessores', 'cerebroTurbo', 'caosControlado', 'pontuacaoTotal', 'dataAvaliacao']) && d.keys().hasOnly(['avaliadorUid', 'pessoaId', 'resenha', 'presencaVip', 'aura', 'modoParceiro', 'carismaNatural', 'humorDeMilhoes', 'energiaDeGrupo', 'criatividadeCaotica', 'modoAtleta', 'talentoDePalco', 'dripEscolar', 'coracaoDeDorama', 'queridinhoDosProfessores', 'cerebroTurbo', 'caosControlado', 'pontuacaoTotal', 'dataAvaliacao'])
+        && d.avaliadorUid == request.auth.uid && d.pessoaId is string
+        && id == request.auth.uid + '_' + d.pessoaId
+        && existsAfter(personPath(d.pessoaId))
+        && getAfter(personPath(d.pessoaId)).data.usuarioUid != request.auth.uid
+        && note(d.resenha)
+        && note(d.presencaVip)
+        && note(d.aura)
+        && note(d.modoParceiro)
+        && note(d.carismaNatural)
+        && note(d.humorDeMilhoes)
+        && note(d.energiaDeGrupo)
+        && note(d.criatividadeCaotica)
+        && note(d.modoAtleta)
+        && note(d.talentoDePalco)
+        && note(d.dripEscolar)
+        && note(d.coracaoDeDorama)
+        && note(d.queridinhoDosProfessores)
+        && note(d.cerebroTurbo)
+        && note(d.caosControlado)
+        && d.pontuacaoTotal is int && d.pontuacaoTotal == d.resenha + d.presencaVip + d.aura + d.modoParceiro + d.carismaNatural + d.humorDeMilhoes + d.energiaDeGrupo + d.criatividadeCaotica + d.modoAtleta + d.talentoDePalco + d.dripEscolar + d.coracaoDeDorama + d.queridinhoDosProfessores + d.cerebroTurbo + d.caosControlado
+        && d.dataAvaliacao == request.time;
+    }
+    match /avaliacoes/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && validVote(request.resource.data, id);
+      allow update: if signedIn() && resource.data.avaliadorUid == request.auth.uid
+        && request.resource.data.avaliadorUid == resource.data.avaliadorUid
+        && request.resource.data.pessoaId == resource.data.pessoaId
+        && validVote(request.resource.data, id);
+      allow delete: if signedIn() && resource.data.avaliadorUid == request.auth.uid;
+    }
+  }
+}
