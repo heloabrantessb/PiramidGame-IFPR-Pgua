@@ -4,442 +4,359 @@ import 'package:signals_flutter/signals_flutter.dart';
 import '../../core/di/dependency_injection.dart';
 import '../../core/routes/app_router.dart';
 import '../../core/theme/theme_controller.dart';
-import '../../domain/entity/student_entity.dart';
-import '../controllers/student_state_viewmodel.dart';
-import '../controllers/student_viewmodel.dart';
+import '../../domain/entity/community_entity.dart';
+import '../controllers/community_viewmodel.dart';
 
-class HomeView extends StatefulWidget {
+class HomeView extends SignalStatefulWidget {
   const HomeView({super.key});
-
   @override
   State<HomeView> createState() => _HomeViewState();
 }
 
-class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin {
-  late final StudentViewModel _viewModel;
-  late final ThemeController _themeController;
-  late TabController _tabController;
-
+class _HomeViewState extends State<HomeView> {
+  final _vm = injector.get<CommunityViewModel>();
+  final _theme = injector.get<ThemeController>();
+  String? _error;
   @override
   void initState() {
     super.initState();
-    _viewModel = injector.get<StudentViewModel>();
-    _themeController = injector.get<ThemeController>();
-    _tabController = TabController(length: 2, vsync: this);
-
-    // Dispara a busca inicial de estudantes
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _viewModel.commands.fetchStudents();
-    });
+    _load();
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  Future<void> _load() async {
+    if (_vm.commands.loadMembers.isExecuting.value) return;
+    final result = await _vm.commands.loadMembers.executeWith(null);
+    if (mounted) setState(() => _error = result.failureValueOrNull?.msg);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    // Registra observers para mostrar snackbars de sucesso e erro
-    _setupEffectObservers(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('PiramidGame IFPR'),
-        actions: [
-          // Alternador de Tema Claro/Escuro reativo
-          IconButton(
-            icon: Icon(
-              _themeController.isLightMode.watch(context)
-                  ? Icons.dark_mode_rounded
-                  : Icons.light_mode_rounded,
-            ),
-            tooltip: 'Alternar Tema',
-            onPressed: () => _themeController.toggleTheme(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.info_outline_rounded),
-            tooltip: 'Sobre o App',
-            onPressed: () => context.push(AppPaths.about),
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: theme.colorScheme.primary,
-          labelColor: theme.colorScheme.primary,
-          unselectedLabelColor: theme.colorScheme.onSurface.withOpacity(0.6),
-          tabs: const [
-            Tab(
-              icon: Icon(Icons.emoji_events_rounded),
-              text: 'Ranking Geral',
-            ),
-            Tab(
-              icon: Icon(Icons.people_alt_rounded),
-              text: 'Alunos',
-            ),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildRankingTab(context),
-          _buildStudentsTab(context),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push(AppPaths.studentForm, extra: null),
-        icon: const Icon(Icons.person_add_rounded),
-        label: const Text('Cadastrar Aluno'),
-      ),
-    );
-  }
-
-  // Configura observadores reativos (effects) para escutar eventos globais de sucesso e erro
-  void _setupEffectObservers(BuildContext context) {
-    // Observer para mensagens de erro
-    effect(() {
-      final msg = _viewModel.state.message.value;
-      if (msg != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(msg),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
-          _viewModel.state.clearMessage();
-        });
-      }
-    });
-
-    // Observer para eventos de sucesso
-    effect(() {
-      final success = _viewModel.state.successEvent.value;
-      if (success != null) {
-        String msg = '';
-        switch (success) {
-          case StudentSuccessEvent.created:
-            msg = 'Estudante cadastrado com sucesso!';
-            break;
-          case StudentSuccessEvent.updated:
-            msg = 'Estudante atualizado com sucesso!';
-            break;
-          case StudentSuccessEvent.deleted:
-            msg = 'Estudante removido com sucesso!';
-            break;
-        }
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(msg),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-            ),
-          );
-          _viewModel.state.clearSuccessEvent();
-        });
-      }
-    });
-  }
-
-  // --- ABA DE RANKING ---
-  Widget _buildRankingTab(BuildContext context) {
-    final ranking = _viewModel.state.ranking.watch(context);
-    final theme = Theme.of(context);
-
-    if (ranking.isEmpty) {
-      return _buildEmptyState(context, 'Nenhum aluno no topo do Olimpo ainda.\nCadastre o primeiro para ver o ranking!');
+  Future<void> _logout() async {
+    if (_vm.commands.logout.isExecuting.value) return;
+    final result = await _vm.commands.logout.executeWith(null);
+    if (mounted && result.isFailure) {
+      setState(() => _error = result.failureValueOrNull!.msg);
     }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: ranking.length,
-      itemBuilder: (context, index) {
-        final student = ranking[index];
-        final isPodium = index < 3;
-        
-        Color podiumColor = theme.colorScheme.surfaceVariant;
-        Widget? podiumBadge;
-
-        if (index == 0) {
-          podiumColor = const Color(0xFFFFD700).withOpacity(0.15); // Ouro
-          podiumBadge = const Icon(Icons.workspace_premium, color: Color(0xFFFFD700), size: 28);
-        } else if (index == 1) {
-          podiumColor = const Color(0xFFC0C0C0).withOpacity(0.15); // Prata
-          podiumBadge = const Icon(Icons.workspace_premium, color: Color(0xFFC0C0C0), size: 28);
-        } else if (index == 2) {
-          podiumColor = const Color(0xFFCD7F32).withOpacity(0.15); // Bronze
-          podiumBadge = const Icon(Icons.workspace_premium, color: Color(0xFFCD7F32), size: 28);
-        }
-
-        return Card(
-          elevation: isPodium ? 2 : 0,
-          color: isPodium ? podiumColor : theme.colorScheme.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(
-              color: isPodium 
-                  ? theme.colorScheme.primary.withOpacity(0.3) 
-                  : theme.colorScheme.outline.withOpacity(0.1),
-            ),
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: SizedBox(
-              width: 40,
-              child: Center(
-                child: podiumBadge ?? Text(
-                  '${index + 1}º',
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            title: Text(
-              student.nome,
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text('${student.curso.displayOptionsName} • Turma ${student.ano}'),
-            trailing: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '${student.ratings.nivelLenda} pts',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  Text(
-                    'Nível Lenda',
-                    style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.secondary),
-                  ),
-                ],
-              ),
-            ),
-            onTap: () => _showStudentDetails(context, student),
-          ),
-        );
-      },
-    );
   }
 
-  // --- ABA DE ALUNOS ---
-  Widget _buildStudentsTab(BuildContext context) {
-    final students = _viewModel.state.students.watch(context);
-    final theme = Theme.of(context);
+  bool _self(CommunityMember m) =>
+      m.linkedUserId == _vm.state.session.value?.uid ||
+      m.student.id == _vm.state.session.value?.studentId;
 
-    if (students.isEmpty) {
-      return _buildEmptyState(context, 'Nenhum estudante cadastrado no campus.');
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: students.length,
-      itemBuilder: (context, index) {
-        final student = students[index];
-
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: theme.colorScheme.outline.withOpacity(0.12)),
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            title: Text(
-              student.nome,
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (student.apelido.isNotEmpty)
-                  Text(
-                    '"${student.apelido}"',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontStyle: FontStyle.italic,
-                      color: theme.colorScheme.onSurface.withOpacity(0.6),
-                    ),
-                  ),
-                const SizedBox(height: 2),
-                Text('${student.curso.displayName} • ${student.ano}'),
-              ],
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.edit_rounded, color: Colors.blue),
-                  onPressed: () => context.push(AppPaths.studentForm, extra: student),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_forever_rounded, color: Colors.red),
-                  onPressed: () => _confirmDelete(context, student),
-                ),
-              ],
-            ),
-            onTap: () => _showStudentDetails(context, student),
-          ),
-        );
-      },
-    );
-  }
-
-  // --- DETALHES DO ESTUDANTE (DIALOG) ---
-  void _showStudentDetails(BuildContext context, Student student) {
-    final theme = Theme.of(context);
-
-    showDialog(
+  void _details(CommunityMember member) {
+    final s = member.student;
+    final self = _self(member);
+    final creator = member.createdBy == _vm.state.session.value?.uid;
+    showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        titlePadding: const EdgeInsets.all(16),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
-              child: Text(student.nome[0].toUpperCase()),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    student.nome,
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  if (student.apelido.isNotEmpty)
-                    Text(
-                      'Vulgo: ${student.apelido}',
-                      style: theme.textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
-                    ),
-                ],
+      builder: (dialogContext) => AlertDialog(
+        title: Text(s.nome),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (s.apelido.isNotEmpty) Text('Apelido: ${s.apelido}'),
+              Text('Curso: ${s.curso.displayOptionsName}'),
+              Text('Turma: ${s.ano}'),
+              Text(
+                'Nascimento: ${s.data_nascimento.day}/${s.data_nascimento.month}/${s.data_nascimento.year}',
               ),
-            ),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
+              Text(
+                member.score == null
+                    ? 'Ainda sem avaliações.'
+                    : 'Nível Lenda Global: ${member.score!.toStringAsFixed(1)} / 75',
+              ),
+              Text('Avaliações recebidas: ${member.assessmentCount}'),
+              for (final entry in member.averageRatings.entries)
+                Text(
+                  '${ratingLabels[entry.key]}: ${entry.value.toStringAsFixed(1)} / 5',
+                ),
+              if (member.personalRatings != null) ...[
                 const Divider(),
-                Text('Curso: ${student.curso.displayName}', style: theme.textTheme.bodyMedium),
-                Text('Turma: Ano ${student.ano}', style: theme.textTheme.bodyMedium),
-                Text('Nível Lenda Geral: ${student.ratings.nivelLenda} pontos', 
-                    style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
-                const SizedBox(height: 12),
-                const Text('Critérios de Popularidade:', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                _buildRatingItem(context, 'Resenha', student.ratings.resenha),
-                _buildRatingItem(context, 'Presença VIP', student.ratings.presencaVip),
-                _buildRatingItem(context, 'Aura', student.ratings.aura),
-                _buildRatingItem(context, 'Modo Parceiro', student.ratings.modoParceiro),
-                _buildRatingItem(context, 'Carisma Natural', student.ratings.carismaNatural),
-                _buildRatingItem(context, 'Humor de Milhões', student.ratings.humorDeMilhoes),
-                _buildRatingItem(context, 'Energia de Grupo', student.ratings.energiaDeGrupo),
-                _buildRatingItem(context, 'Criatividade Caótica', student.ratings.criatividadeCaotica),
-                _buildRatingItem(context, 'Modo Atleta', student.ratings.modoAtleta),
-                _buildRatingItem(context, 'Talento de Palco', student.ratings.talentoDePalco),
-                _buildRatingItem(context, 'Drip Escolar', student.ratings.dripEscolar),
-                _buildRatingItem(context, 'Coração de Dorama', student.ratings.coracaoDeDorama),
-                _buildRatingItem(context, 'Queridinho dos Profs', student.ratings.queridinhoDosProfessores),
-                _buildRatingItem(context, 'Cérebro Turbo', student.ratings.cerebroTurbo),
-                _buildRatingItem(context, 'Caos Controlado', student.ratings.caosControlado),
-                const SizedBox(height: 16),
+                Text(
+                  'Minha avaliação: ${member.personalRatings!.nivelLenda} / 75',
+                ),
+                if (member.assessmentDate != null)
+                  Text(
+                    'Avaliada em: ${member.assessmentDate!.day}/${member.assessmentDate!.month}/${member.assessmentDate!.year}',
+                  ),
               ],
-            ),
+              if (self)
+                const Text(
+                  'Este é seu perfil. Você não pode avaliar a si mesmo.',
+                ),
+            ],
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Fechar'),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRatingItem(BuildContext context, String label, int rating) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: theme.textTheme.bodyMedium),
-          Row(
-            children: List.generate(
-              5,
-              (index) => Icon(
-                Icons.star_rounded,
-                size: 20,
-                color: index < rating ? Colors.amber : theme.colorScheme.outline.withOpacity(0.3),
+          if (member.linkedUserId == null &&
+              _vm.state.session.value?.studentId == null)
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _link(member);
+              },
+              child: const Text('Este sou eu'),
+            ),
+          if (creator) ...[
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                context.push('${AppPaths.studentForm}?id=${s.id}');
+              },
+              child: const Text('Editar'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _remove(member);
+              },
+              child: const Text('Remover'),
+            ),
+          ],
+          if (!self)
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                context.push('/assess/${s.id}');
+              },
+              child: Text(
+                member.personalRatings == null
+                    ? 'Avaliar'
+                    : 'Alterar avaliação',
               ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  // --- CONFIRMAÇÃO DE EXCLUSÃO ---
-  void _confirmDelete(BuildContext context, Student student) {
-    showDialog(
+  Future<void> _link(CommunityMember member) async {
+    if (_vm.commands.linkProfile.isExecuting.value) return;
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirmar Remoção'),
-        content: Text('Tem certeza que deseja remover ${student.nome} do ranking? Esta ação é irreversível.'),
+        title: const Text('Este é seu perfil?'),
+        content: Text(
+          'Vincular ${member.student.nome} à sua conta? Você não poderá avaliar esta pessoa. Uma avaliação anterior feita por você será removida.',
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancelar'),
           ),
-          ElevatedButton(
-            onPressed: () {
-              _viewModel.commands.deleteStudent(student.id);
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Vincular'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final result = await _vm.commands.linkProfile.executeWith(
+      member.student.id,
+    );
+    if (!mounted) return;
+    if (result.isFailure) {
+      setState(() => _error = result.failureValueOrNull!.msg);
+    } else {
+      await _load();
+    }
+  }
+
+  Future<void> _remove(CommunityMember member) async {
+    if (_vm.commands.deleteProfile.isExecuting.value) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remover pessoa?'),
+        content: Text(
+          '${member.student.nome} será removido das listas e dos rankings. Esta ação não pode ser desfeita. A conta de acesso não será excluída.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Remover'),
           ),
         ],
       ),
     );
+    if (confirmed != true || !mounted) return;
+    final result = await _vm.commands.deleteProfile.executeWith(
+      member.student.id,
+    );
+    if (!mounted) return;
+    if (result.isFailure) {
+      setState(() => _error = result.failureValueOrNull!.msg);
+    } else {
+      await _load();
+    }
   }
 
-  // --- ESTADO VAZIO ---
-  Widget _buildEmptyState(BuildContext context, String message) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+  @override
+  Widget build(BuildContext context) {
+    final members = _vm.state.members.value;
+    final personal = _vm.state.personalRanking.value;
+    final people = List<CommunityMember>.of(members)
+      ..sort(
+        (a, b) => a.student.nome.toLowerCase().compareTo(
+          b.student.nome.toLowerCase(),
+        ),
+      );
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('PiramidGame'),
+          actions: [
+            IconButton(
+              tooltip: 'Alternar tema',
+              onPressed: () async {
+                final result = await _theme.toggleCommand.call();
+                if (mounted && result.isFailure) {
+                  setState(() => _error = result.failureValueOrNull!.msg);
+                }
+              },
+              icon: Icon(
+                _theme.isLightMode.value ? Icons.dark_mode : Icons.light_mode,
+              ),
+            ),
+            IconButton(
+              tooltip: 'Sobre o App',
+              icon: const Icon(Icons.info_outline),
+              onPressed: () => context.push(AppPaths.about),
+            ),
+            IconButton(
+              tooltip: 'Sair da conta',
+              icon: const Icon(Icons.logout),
+              onPressed: _vm.commands.logout.isExecuting.value ? null : _logout,
+            ),
+          ],
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Pessoas'),
+              Tab(text: 'Pessoal'),
+              Tab(text: 'Global'),
+            ],
+          ),
+        ),
+        body: Column(
           children: [
-            Icon(Icons.people_outline_rounded, size: 64, color: theme.colorScheme.secondary.withOpacity(0.4)),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onBackground.withOpacity(0.6)),
+            if (_vm.commands.loadMembers.isExecuting.value)
+              const LinearProgressIndicator(),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _list(people, kind: 'people'),
+                  _list(personal, kind: 'personal'),
+                  _list(members, kind: 'global'),
+                ],
+              ),
             ),
           ],
         ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => context.push(AppPaths.studentForm),
+          icon: const Icon(Icons.person_add_alt),
+          label: const Text('Cadastrar pessoa'),
+        ),
       ),
+    );
+  }
+
+  Widget _list(List<CommunityMember> members, {required String kind}) {
+    final personal = kind == 'personal';
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(switch (kind) {
+            'personal' =>
+              'Ranking pessoal: na sua opinião, quem tem o maior Nível Lenda? Somente suas avaliações são consideradas.',
+            'global' =>
+              'Ranking global: média das avaliações recebidas de todos os usuários, de 15 a 75 pontos.',
+            _ =>
+              'Pessoas disponíveis para avaliação. Elas não precisam ter uma conta de acesso.',
+          }),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _load,
+            child: members.isEmpty
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          personal
+                              ? 'Você ainda não avaliou nenhuma pessoa.'
+                              : 'Nenhuma pessoa cadastrada.',
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _load,
+                        child: const Text('Recarregar'),
+                      ),
+                    ],
+                  )
+                : ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 90),
+                    itemCount: members.length,
+                    itemBuilder: (context, index) {
+                      final member = members[index];
+                      final self = _self(member);
+                      final score = personal
+                          ? member.personalRatings?.nivelLenda.toDouble()
+                          : member.score;
+                      return Card(
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            child: kind == 'people'
+                                ? const Icon(Icons.person_outline)
+                                : Text(score == null ? '—' : '${index + 1}º'),
+                          ),
+                          title: Text(
+                            '${member.student.nome}${self ? ' (você)' : ''}',
+                          ),
+                          subtitle: Text(
+                            '${member.student.curso.displayOptionsName} • ${member.student.ano}\n'
+                            '${score == null ? 'Sem avaliações' : '${score.toStringAsFixed(1)} pts${personal ? '' : ' • ${member.assessmentCount} avaliação(ões)'}'}',
+                          ),
+                          isThreeLine: true,
+                          onTap: () => _details(member),
+                          trailing: self
+                              ? const Icon(Icons.person)
+                              : IconButton(
+                                  tooltip: 'Avaliar pessoa',
+                                  icon: const Icon(Icons.star_outline),
+                                  onPressed: () => context.push(
+                                    '/assess/${member.student.id}',
+                                  ),
+                                ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ),
+      ],
     );
   }
 }

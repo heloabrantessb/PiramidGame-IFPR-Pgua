@@ -1,0 +1,2 @@
+// Copie para Firebase.xcconfig e use REVERSED_CLIENT_ID do aplicativo iOS.
+GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.SEUCAMPOREVERSEDCLIENTID

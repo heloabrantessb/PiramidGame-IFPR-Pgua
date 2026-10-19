@@ -1,7 +1,8 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/routes/app_router.dart';
+import '../../core/di/dependency_injection.dart';
+import '../controllers/community_viewmodel.dart';
 
 class SplashView extends StatefulWidget {
   const SplashView({super.key});
@@ -10,35 +11,50 @@ class SplashView extends StatefulWidget {
   State<SplashView> createState() => _SplashViewState();
 }
 
-class _SplashViewState extends State<SplashView> with SingleTickerProviderStateMixin {
+class _SplashViewState extends State<SplashView>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  String? _error;
   late Animation<double> _opacityAnimation;
   late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
-    
+
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     );
 
-    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
-    );
+    _opacityAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
 
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
 
     _controller.forward();
 
-    Timer(const Duration(seconds: 3), () {
-      if (mounted) {
-        context.go(AppPaths.home);
-      }
-    });
+    _restore();
+  }
+
+  Future<void> _restore() async {
+    setState(() => _error = null);
+    final result = await injector
+        .get<CommunityViewModel>()
+        .commands
+        .restoreSession
+        .executeWith(null);
+    if (!mounted) return;
+    if (result.isFailure) {
+      setState(() => _error = result.failureValueOrNull!.msg);
+    } else {
+      context.go(AppPaths.home);
+    }
   }
 
   @override
@@ -50,7 +66,7 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -85,7 +101,8 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    Icons.change_history_rounded, // Ícone que lembra uma pirâmide
+                    Icons
+                        .change_history_rounded, // Ícone que lembra uma pirâmide
                     size: 100,
                     color: theme.colorScheme.primary,
                   ),
@@ -107,7 +124,18 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
                   ),
                 ),
                 const SizedBox(height: 48),
-                const CircularProgressIndicator(),
+                if (_error == null)
+                  const CircularProgressIndicator()
+                else ...[
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(_error!, textAlign: TextAlign.center),
+                  ),
+                  TextButton(
+                    onPressed: _restore,
+                    child: const Text('Tentar novamente'),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 Text(
                   'O caótico e lendário ranking de popularidade',
