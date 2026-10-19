@@ -1,9 +1,1 @@
-{
-  "firestore": {"rules": "firestore.rules", "indexes": "firestore.indexes.json"},
-  "emulators": {
-    "firestore": {"host": "127.0.0.1", "port": 8080},
-    "auth": {"host": "127.0.0.1", "port": 9099},
-    "ui": {"enabled": false},
-    "singleProjectMode": true
-  }
-}
+{"firestore":{"rules":"firestore.rules","indexes":"firestore.indexes.json"},"emulators":{"firestore":{"host":"127.0.0.1","port":8080},"auth":{"host":"127.0.0.1","port":9099},"ui":{"enabled":false},"singleProjectMode":true},"flutter":{"platforms":{"android":{"default":{"projectId":"piramidgame-ifpr","appId":"1:576112285706:android:3bb262113a0180e9cda7f3","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"piramidgame-ifpr","configurations":{"android":"1:576112285706:android:3bb262113a0180e9cda7f3","ios":"1:576112285706:ios:df759dc39736f795cda7f3","macos":"1:576112285706:ios:df759dc39736f795cda7f3","web":"1:576112285706:web:f569d4539239f01ccda7f3","windows":"1:576112285706:web:ab51a85bdcd49c2ecda7f3"}}}}}}

@@ -99,7 +99,7 @@ final class StudentSqliteService implements IStudentStorage {
         return Error(EmptyResultFailure('Estudante não encontrado para remoção.'));
       }
     } catch (e) {
-      return Error(ApiLocalFailure('Erro ao excluir estudante: $e'));
+      return Error(ApiLocalFailure('Erro ao excluir estudante: $e')); 
     }
   }
 
@@ -117,10 +117,10 @@ final class StudentSqliteService implements IStudentStorage {
       if (maps.isNotEmpty) {
         return Success(StudentMapper.fromSqliteMap(maps.first));
       } else {
-        return Error(EmptyResultFailure('Estudante não encontrado.'));
+         return Error(EmptyResultFailure('Estudante não encontrado.'));
       }
     } catch (e) {
       return Error(ApiLocalFailure('Erro ao buscar estudante: $e'));
     }
-  }
+  } 
 }

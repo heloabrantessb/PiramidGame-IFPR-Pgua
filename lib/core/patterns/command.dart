@@ -27,15 +27,16 @@ abstract base class Command<Success, Error>
     if (_running.value) {
       throw StateError('Command is already running');
     }
-    
+
     _running.value = true; // indica que está rodando
     _result.value = null; // limpa resultado anterior
-    
-    final res = await execute(); // executa a ação
-    _result.value = res;
-    
-    _running.value = false; // indica que terminou
-    return res;
+    try {
+      final res = await execute(); // executa a ação
+      _result.value = res;
+      return res;
+    } finally {
+      _running.value = false;
+    }
   }
 
   void clear() {
