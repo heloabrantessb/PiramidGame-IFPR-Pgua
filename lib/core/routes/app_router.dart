@@ -37,6 +37,11 @@ class AppRouter {
     refreshListenable: vm.state,
     redirect: (context, state) {
       final path = state.uri.path;
+      if (!vm.state.authenticationReady.value &&
+          path != AppPaths.splash &&
+          path != AppPaths.about) {
+        return AppPaths.splash;
+      }
       final authenticated = vm.state.session.value != null;
       final authPage = path == AppPaths.login || path == AppPaths.register;
       final public =
@@ -70,7 +75,8 @@ class AppRouter {
       GoRoute(
         path: AppPaths.studentForm,
         name: AppRouteNames.studentForm,
-        builder: (_, _) => const StudentFormView(),
+        builder: (_, state) =>
+            StudentFormView(personId: state.uri.queryParameters['id']),
       ),
       GoRoute(
         path: '/assess/:id',

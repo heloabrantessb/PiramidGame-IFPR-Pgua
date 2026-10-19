@@ -1,21 +1,30 @@
 import 'student_entity.dart';
 
 class AccountSession {
-  final String studentId;
+  final String uid;
   final String email;
-  const AccountSession(this.studentId, this.email);
+  final String? studentId;
+  const AccountSession(this.uid, this.email, {this.studentId});
 }
 
 class CommunityMember {
   final Student student;
   final int assessmentCount;
   final double? score;
+  final String createdBy;
+  final String? linkedUserId;
+  final PopularityRatings? personalRatings;
+  final DateTime? assessmentDate;
   final Map<String, double> averageRatings;
   const CommunityMember(
     this.student,
     this.assessmentCount,
     this.score, [
     this.averageRatings = const {},
+    this.createdBy = '',
+    this.linkedUserId,
+    this.personalRatings,
+    this.assessmentDate,
   ]);
 }
 

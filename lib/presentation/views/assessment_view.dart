@@ -85,7 +85,9 @@ class _AssessmentViewState extends State<AssessmentView> {
     final members = _vm.state.members.value.where(
       (m) => m.student.id == widget.targetId,
     );
-    final self = widget.targetId == _vm.state.session.value?.studentId;
+    final self =
+        widget.targetId == _vm.state.session.value?.studentId ||
+        members.any((m) => m.linkedUserId == _vm.state.session.value?.uid);
     final available = !self && members.isNotEmpty;
     return PopScope(
       canPop: !busy,
@@ -99,9 +101,7 @@ class _AssessmentViewState extends State<AssessmentView> {
         ),
         body: !available
             ? const Center(
-                child: Text(
-                  'Você só pode avaliar outros usuários cadastrados.',
-                ),
+                child: Text('Você só pode avaliar outras pessoas cadastradas.'),
               )
             : _loading
             ? const Center(child: CircularProgressIndicator())
@@ -109,7 +109,7 @@ class _AssessmentViewState extends State<AssessmentView> {
                 padding: const EdgeInsets.all(24),
                 children: [
                   const Text(
-                    'Uma avaliação por usuário. Ao salvar novamente, suas notas anteriores são substituídas.',
+                    'Uma avaliação por pessoa. Ao salvar novamente, suas notas anteriores são substituídas.',
                   ),
                   const SizedBox(height: 16),
                   if (_error != null) ...[

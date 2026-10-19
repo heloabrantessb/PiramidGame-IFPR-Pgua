@@ -2,14 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 import '../../core/di/dependency_injection.dart';
-import '../../domain/entity/community_entity.dart';
+import '../controllers/community_commands_viewmodel.dart';
 import '../../domain/entity/student_entity.dart';
 import '../controllers/community_viewmodel.dart';
 
 class ProfileForm extends SignalStatefulWidget {
-  final bool registration;
   final Student? initial;
-  const ProfileForm({super.key, this.registration = false, this.initial});
+  final bool initiallyLinked;
+  final bool canLink;
+  const ProfileForm({
+    super.key,
+    this.initial,
+    this.initiallyLinked = false,
+    this.canLink = true,
+  });
   @override
   State<ProfileForm> createState() => _ProfileFormState();
 }
@@ -19,9 +25,7 @@ class _ProfileFormState extends State<ProfileForm> {
   final _vm = injector.get<CommunityViewModel>();
   late final _name = TextEditingController(text: widget.initial?.nome);
   late final _nickname = TextEditingController(text: widget.initial?.apelido);
-  final _email = TextEditingController();
-  final _password = TextEditingController();
-  final _confirmation = TextEditingController();
+  late bool _linkToSelf = widget.initiallyLinked;
   late StudentCourses _course = widget.initial?.curso ?? StudentCourses.info;
   late int _year = widget.initial?.ano ?? 2026;
   late DateTime? _birth = widget.initial?.data_nascimento;
@@ -30,16 +34,15 @@ class _ProfileFormState extends State<ProfileForm> {
 
   @override
   void dispose() {
-    for (final c in [_name, _nickname, _email, _password, _confirmation]) {
+    for (final c in [_name, _nickname]) {
       c.dispose();
     }
     super.dispose();
   }
 
   Future<void> _save() async {
-    if (_saving ||
-        _vm.commands.register.isExecuting.value ||
-        _vm.commands.updateProfile.isExecuting.value) {
+    FocusScope.of(context).unfocus();
+    if (_saving || _vm.commands.saveProfile.isExecuting.value) {
       return;
     }
     if (!_form.currentState!.validate()) return;
@@ -60,37 +63,28 @@ class _ProfileFormState extends State<ProfileForm> {
       data_nascimento: _birth!,
       ratings: widget.initial?.ratings ?? const PopularityRatings.empty(),
     );
-    if (widget.registration) {
-      final result = await _vm.commands.register.executeWith(
-        Registration(profile, _email.text, _password.text),
-      );
-      if (!mounted) return;
-      if (result.isFailure) {
-        setState(() {
-          _error = result.failureValueOrNull!.msg;
-          _saving = false;
-        });
-      }
-    } else {
-      final result = await _vm.commands.updateProfile.executeWith(profile);
-      if (!mounted) return;
-      if (result.isFailure) {
-        setState(() {
-          _error = result.failureValueOrNull!.msg;
-          _saving = false;
-        });
-        return;
-      }
-      await _vm.commands.loadMembers.executeWith(null);
-      if (mounted) context.pop();
+    final result = await _vm.commands.saveProfile.executeWith(
+      ProfileSubmission(
+        profile,
+        create: widget.initial == null,
+        linkToSelf: _linkToSelf,
+      ),
+    );
+    if (!mounted) return;
+    if (result.isFailure) {
+      setState(() {
+        _error = result.failureValueOrNull!.msg;
+        _saving = false;
+      });
+      return;
     }
+    await _vm.commands.loadMembers.executeWith(null);
+    if (mounted) context.pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    final registering = _vm.commands.register.isExecuting.value;
-    final updating = _vm.commands.updateProfile.isExecuting.value;
-    final busy = registering || updating || _saving;
+    final busy = _vm.commands.saveProfile.isExecuting.value || _saving;
     return PopScope(
       canPop: !busy,
       child: Center(
@@ -102,12 +96,12 @@ class _ProfileFormState extends State<ProfileForm> {
               padding: const EdgeInsets.all(24),
               children: [
                 Text(
-                  widget.registration ? 'Seu perfil no campus' : 'Meu perfil',
+                  widget.initial == null ? 'Cadastrar pessoa' : 'Editar pessoa',
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Suas notas são atribuídas por outros usuários. Editar o perfil não altera as avaliações recebidas.',
+                  'Cadastrar uma pessoa não cria uma conta de acesso. As avaliações são independentes do cadastro.',
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -169,45 +163,23 @@ class _ProfileFormState extends State<ProfileForm> {
                           }
                         },
                 ),
-                if (widget.registration) ...[
-                  const SizedBox(height: 24),
-                  TextFormField(
-                    controller: _email,
-                    enabled: !busy,
-                    keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.email],
-                    decoration: const InputDecoration(labelText: 'E-mail *'),
-                    validator: (v) => v == null || v.trim().isEmpty
-                        ? 'Informe seu e-mail.'
-                        : null,
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Este é meu perfil'),
+                  subtitle: const Text(
+                    'Vincula esta pessoa à sua conta e bloqueia a autoavaliação.',
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _password,
-                    enabled: !busy,
-                    obscureText: true,
-                    autofillHints: const [AutofillHints.newPassword],
-                    decoration: const InputDecoration(
-                      labelText: 'Senha *',
-                      helperText: 'Entre 8 e 128 caracteres',
-                    ),
-                    validator: (v) =>
-                        v == null || v.length < 8 || v.length > 128
-                        ? 'Use entre 8 e 128 caracteres.'
-                        : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _confirmation,
-                    enabled: !busy,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Confirmar senha *',
-                    ),
-                    validator: (v) =>
-                        v != _password.text ? 'As senhas não coincidem.' : null,
-                  ),
-                ],
+                  value: _linkToSelf,
+                  onChanged:
+                      busy ||
+                          !widget.canLink ||
+                          widget.initiallyLinked ||
+                          (_vm.state.session.value?.studentId != null &&
+                              _vm.state.session.value?.studentId !=
+                                  widget.initial?.id)
+                      ? null
+                      : (value) => setState(() => _linkToSelf = value ?? false),
+                ),
                 if (_error != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 16),
@@ -221,13 +193,7 @@ class _ProfileFormState extends State<ProfileForm> {
                 const SizedBox(height: 24),
                 FilledButton(
                   onPressed: busy ? null : _save,
-                  child: Text(
-                    busy
-                        ? 'Salvando…'
-                        : widget.registration
-                        ? 'Criar conta e entrar'
-                        : 'Salvar perfil',
-                  ),
+                  child: Text(busy ? 'Salvando…' : 'Salvar pessoa'),
                 ),
               ],
             ),
